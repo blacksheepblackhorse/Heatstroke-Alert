@@ -3,22 +3,50 @@
 <head>
   <title>Heatstroke Monitor</title>
   <style>
-    body { font-family: Arial; text-align: center; padding-top: 50px; }
-    .alert { font-size: 32px; color: red; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding-top: 50px;
+    }
+    .alert {
+      font-size: 32px;
+      font-weight: bold;
+      color: red;
+    }
+    .normal {
+      font-size: 32px;
+      font-weight: bold;
+      color: green;
+    }
   </style>
 </head>
 <body>
-  <h1>Gait Alert System</h1>
-  <p id="status" class="alert">Loading...</p>
+  <h1>🚶 Gait Alert System</h1>
+  <p id="status" class="normal">Loading...</p>
 
   <script>
-    setInterval(() => {
-      fetch('/status')
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById("status").innerText = data.status;
-        });
-    }, 2000);
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/status');
+        const data = await res.json();
+        const statusElem = document.getElementById("status");
+
+        statusElem.innerText = data.status;
+
+        // Update color dynamically
+        if (data.status.includes("HEATSTROKE")) {
+          statusElem.className = "alert";
+        } else {
+          statusElem.className = "normal";
+        }
+
+      } catch (e) {
+        document.getElementById("status").innerText = "⚠️ Error fetching status";
+      }
+    }
+
+    setInterval(fetchStatus, 1500);
+    fetchStatus();
   </script>
 </body>
 </html>
