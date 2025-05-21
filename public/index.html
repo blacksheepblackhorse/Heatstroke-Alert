@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Heatstroke Monitor</title>
+  <style>
+    body { font-family: Arial; text-align: center; padding-top: 50px; }
+    .alert { font-size: 32px; color: red; }
+  </style>
+</head>
+<body>
+  <h1>Gait Alert System</h1>
+  <p id="status" class="alert">Loading...</p>
+
+  <script>
+    setInterval(() => {
+      fetch('/status')
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("status").innerText = data.status;
+        });
+    }, 2000);
+  </script>
+</body>
+</html>
