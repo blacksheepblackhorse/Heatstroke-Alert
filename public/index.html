@@ -8,36 +8,33 @@
       text-align: center;
       padding-top: 50px;
     }
-    .alert {
+    .status {
       font-size: 32px;
       font-weight: bold;
-      color: red;
     }
-    .normal {
-      font-size: 32px;
-      font-weight: bold;
-      color: green;
-    }
+    .normal { color: green; }
+    .alert { color: red; }
+    .nosignal { color: gray; }
   </style>
 </head>
 <body>
-  <h1>🚶 Gait Alert System</h1>
-  <p id="status" class="normal">Loading...</p>
+  <h1>🚶 Gait Monitoring Dashboard</h1>
+  <p id="status" class="status">Loading...</p>
 
   <script>
     async function fetchStatus() {
       try {
-        const res = await fetch('/status');
+        const res = await fetch("/status");
         const data = await res.json();
         const statusElem = document.getElementById("status");
-
         statusElem.innerText = data.status;
 
-        // Update color dynamically
-        if (data.status.includes("HEATSTROKE")) {
-          statusElem.className = "alert";
+        if (data.status.includes("Normal")) {
+          statusElem.className = "status normal";
+        } else if (data.status.includes("HEATSTROKE")) {
+          statusElem.className = "status alert";
         } else {
-          statusElem.className = "normal";
+          statusElem.className = "status nosignal";
         }
 
       } catch (e) {
