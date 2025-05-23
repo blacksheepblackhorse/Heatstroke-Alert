@@ -27,6 +27,7 @@
         const res = await fetch("/status");
         const data = await res.json();
         const statusElem = document.getElementById("status");
+
         statusElem.innerText = data.status;
 
         if (data.status.includes("Normal")) {
