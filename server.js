@@ -14,12 +14,16 @@ app.post("/alert", (req, res) => {
   lastUpdateTime = Date.now();
 
   if (status === "heatstroke") {
-    latestStatus = "⚠️ HEATSTROKE DETECTED!";
-  } else if (status === "normal") {
-    latestStatus = "✅ Normal";
-  } else {
-    latestStatus = "❓ Unknown Status";
-  }
+  latestStatus = "⚠️ HEATSTROKE DETECTED!";
+} else if (status === "normal") {
+  latestStatus = "✅ Normal";
+} else if (status === "gait-data") {
+  const steps = req.body.steps || 0;
+  const cadence = req.body.cadence || 0;
+  latestStatus = `📊 Steps: ${steps}, Cadence: ${cadence.toFixed(2)} spm`;
+} else {
+  latestStatus = "❓ Unknown Status";
+}
 
   res.sendStatus(200);
 });
