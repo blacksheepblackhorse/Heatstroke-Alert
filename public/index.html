@@ -1,50 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Heatstroke Monitor</title>
+  <title>Gait Monitor</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding-top: 50px;
-    }
-    .status {
-      font-size: 32px;
-      font-weight: bold;
-    }
-    .normal { color: green; }
-    .alert { color: red; }
-    .nosignal { color: gray; }
+    body { font-family: Arial; }
+    .status { font-weight: bold; font-size: 20px; }
   </style>
+  <script>
+    async function fetchData() {
+      const res = await fetch('/api/data');
+      const data = await res.json();
+
+      document.getElementById("cadence").innerText = data.cadence;
+      document.getElementById("sway").innerText = data.sway;
+      document.getElementById("variability").innerText = data.step_variability;
+      document.getElementById("abnormal").innerText = data.abnormal_count;
+      document.getElementById("timestamp").innerText = data.timestamp;
+
+      const statusEl = document.getElementById("status");
+      statusEl.innerText = data.status;
+      statusEl.style.color = data.status.includes("WARNING") ? "red" : "green";
+    }
+
+    setInterval(fetchData, 1000);
+  </script>
 </head>
 <body>
-  <h1>🚶 Gait Monitoring Dashboard</h1>
-  <p id="status" class="status">Loading...</p>
-
-  <script>
-    async function fetchStatus() {
-      try {
-        const res = await fetch("/status");
-        const data = await res.json();
-        const statusElem = document.getElementById("status");
-
-        statusElem.innerText = data.status;
-
-        if (data.status.includes("Normal")) {
-          statusElem.className = "status normal";
-        } else if (data.status.includes("HEATSTROKE")) {
-          statusElem.className = "status alert";
-        } else {
-          statusElem.className = "status nosignal";
-        }
-
-      } catch (e) {
-        document.getElementById("status").innerText = "⚠️ Error fetching status";
-      }
-    }
-
-    setInterval(fetchStatus, 1500);
-    fetchStatus();
-  </script>
+  <h1>👣 Gait Monitoring Dashboard</h1>
+  <p><strong>Status:</strong> <span id="status" class="status">Not Sensing</span></p>
+  <p><strong>Cadence:</strong> <span id="cadence">0</span> steps/min</p>
+  <p><strong>Sway:</strong> <span id="sway">0</span> deg/sec</p>
+  <p><strong>Step Variability:</strong> <span id="variability">0</span> ms</p>
+  <p><strong>Abnormal Count:</strong> <span id="abnormal">0</span></p>
+  <p><strong>Last Updated:</strong> <span id="timestamp">-</span></p>
 </body>
 </html>
