@@ -10,6 +10,8 @@
     async function fetchData() {
       const res = await fetch('/data');
       const data = await res.json();
+      document.getElementById("recruit-name").innerText = data.name || "Unknown";
+
 
       document.getElementById("cadence").innerText = data.cadence;
       document.getElementById("sway").innerText = data.sway;
