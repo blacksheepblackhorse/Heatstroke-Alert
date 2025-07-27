@@ -1,21 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
   <title>Gait Monitoring Dashboard</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
+      font-family: Arial;
+      background: #f7f7f7;
       padding: 40px;
     }
 
     .card {
-      background: #fff;
+      background: white;
       padding: 20px;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      max-width: 450px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      max-width: 400px;
       margin: auto;
     }
 
@@ -26,23 +25,14 @@
 
     .status {
       font-size: 20px;
-      margin: 20px 0;
+      margin: 15px 0;
       text-align: center;
+      font-weight: bold;
     }
 
     .metric {
+      margin: 10px 0;
       font-size: 16px;
-      margin: 8px 0;
-    }
-
-    .alert {
-      color: red;
-      font-weight: bold;
-    }
-
-    .normal {
-      color: green;
-      font-weight: bold;
     }
   </style>
 </head>
@@ -51,45 +41,29 @@
     <h1>👣 Gait Status Monitor</h1>
     <div id="status" class="status">Status: ❌ Not Sensing</div>
     <div id="recruit" class="metric">Recruit: -</div>
-
-
     <div id="cadence" class="metric">Cadence: -</div>
     <div id="sway" class="metric">Sway: -</div>
     <div id="variability" class="metric">Step Variability: -</div>
     <div id="steps" class="metric">Total Steps: -</div>
-  
-
   </div>
 
   <script>
     function updateStatus() {
       fetch("/status")
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
-          const statusText = document.getElementById("status");
-          statusText.textContent = "Status: " + data.status;
-
-          // Change color based on status
-          if (data.status.includes("Abnormal")) {
-            statusText.className = "status alert";
-          } else if (data.status.includes("Normal")) {
-            statusText.className = "status normal";
-          } else {
-            statusText.className = "status";
-          }
-
-          document.getElementById("cadence").textContent = "Cadence: " + data.cadence.toFixed(2) + " steps/min";
-          document.getElementById("sway").textContent = "Sway: " + data.sway.toFixed(2);
-          document.getElementById("variability").textContent = "Step Variability: " + data.step_variability.toFixed(2);
-          document.getElementById("steps").textContent = "Total Steps: " + data.total_steps;
+          document.getElementById("status").innerText = "Status: " + data.status;
+          document.getElementById("recruit").innerText = "Recruit: " + data.recruit;
+          document.getElementById("cadence").innerText = "Cadence: " + data.cadence + " steps/min";
+          document.getElementById("sway").innerText = "Sway: " + data.sway.toFixed(2);
+          document.getElementById("variability").innerText = "Step Variability: " + data.step_variability.toFixed(2);
+          document.getElementById("steps").innerText = "Total Steps: " + data.total_steps;
         })
-        .catch(error => {
-          console.error("Error fetching data:", error);
-        });
+        .catch(err => console.error("Error fetching status:", err));
     }
 
-    setInterval(updateStatus, 5000); // Update every 5 seconds
-    updateStatus(); // Initial call
+    setInterval(updateStatus, 5000);
+    updateStatus();
   </script>
 </body>
 </html>
