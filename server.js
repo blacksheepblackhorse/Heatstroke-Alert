@@ -1,10 +1,11 @@
-const express = require('express');
+cconst express = require('express');
 const app = express();
 const path = require('path');
 
-app.use(express.json()); // to parse JSON body
+app.use(express.json()); // Parse JSON
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Store latest data globally
 let latestData = {
   name: "N/A",
   cadence: 0,
@@ -15,15 +16,15 @@ let latestData = {
 app.post('/data', (req, res) => {
   const { name, cadence, sway, step_variability } = req.body;
   latestData = { name, cadence, sway, step_variability };
-  console.log(`✅ Data received from ${name}:`, latestData);
-  res.status(200).send('Data received');
+  console.log(`Received from ${name}:`, latestData);
+  res.status(200).send('OK');
 });
 
 app.get('/data', (req, res) => {
-  res.json(latestData); // frontend will fetch from here
+  res.json(latestData);
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🌐 Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
