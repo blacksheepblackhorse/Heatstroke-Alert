@@ -1,40 +1,49 @@
-from flask import Flask, request, jsonify, render_template_string
-
-app = Flask(__name__)
-
-latestData = {
-    "status": "❌ Not Sensing",
-    "cadence": 0,
-    "sway": 0,
-    "step_variability": 0,
-    "total_steps": 0
-}
-
-@app.route("/")
-def home():
-    return render_template_string(html_template)
-
-@app.route("/data", methods=["POST"])
-def receive_data():
-    global latestData
-    latestData = request.get_json()
-    return "", 200
-
-@app.route("/status")
-def get_status():
-    return jsonify(latestData)
-
-html_template = """
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Gait Monitoring Dashboard</title>
   <style>
-    body { font-family: Arial; background: #f7f7f7; padding: 40px; }
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
-    h1 { font-size: 24px; }
-    .status { font-size: 20px; margin: 15px 0; }
-    .metric { margin: 10px 0; font-size: 16px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 40px;
+    }
+
+    .card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      max-width: 450px;
+      margin: auto;
+    }
+
+    h1 {
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .status {
+      font-size: 20px;
+      margin: 20px 0;
+      text-align: center;
+    }
+
+    .metric {
+      font-size: 16px;
+      margin: 8px 0;
+    }
+
+    .alert {
+      color: red;
+      font-weight: bold;
+    }
+
+    .normal {
+      color: green;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -50,20 +59,32 @@ html_template = """
   <script>
     function updateStatus() {
       fetch("/status")
-        .then(res => res.json())
+        .then(response => response.json())
         .then(data => {
-          document.getElementById("status").innerText = "Status: " + data.status;
-          document.getElementById("cadence").innerText = "Cadence: " + data.cadence + " steps/min";
-          document.getElementById("sway").innerText = "Sway: " + data.sway.toFixed(2);
-          document.getElementById("variability").innerText = "Step Variability: " + data.step_variability.toFixed(2);
-          document.getElementById("steps").innerText = "Total Steps: " + data.total_steps;
+          const statusText = document.getElementById("status");
+          statusText.textContent = "Status: " + data.status;
+
+          // Change color based on status
+          if (data.status.includes("Abnormal")) {
+            statusText.className = "status alert";
+          } else if (data.status.includes("Normal")) {
+            statusText.className = "status normal";
+          } else {
+            statusText.className = "status";
+          }
+
+          document.getElementById("cadence").textContent = "Cadence: " + data.cadence.toFixed(2) + " steps/min";
+          document.getElementById("sway").textContent = "Sway: " + data.sway.toFixed(2);
+          document.getElementById("variability").textContent = "Step Variability: " + data.step_variability.toFixed(2);
+          document.getElementById("steps").textContent = "Total Steps: " + data.total_steps;
         })
-        .catch(err => console.error("Error fetching status:", err));
+        .catch(error => {
+          console.error("Error fetching data:", error);
+        });
     }
 
-    setInterval(updateStatus, 5000);
-    updateStatus();
+    setInterval(updateStatus, 5000); // Update every 5 seconds
+    updateStatus(); // Initial call
   </script>
 </body>
 </html>
-"""
