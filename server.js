@@ -1,30 +1,33 @@
-const express = require('express');
+const express = require("express");
 const app = express();
-const path = require('path');
+const path = require("path");
 
-app.use(express.json()); // Parse JSON
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Store latest data globally
 let latestData = {
-  name: "N/A",
+  status: "❌ Not Sensing",
   cadence: 0,
   sway: 0,
-  step_variability: 0
+  step_variability: 0,
+  total_steps: 0
 };
 
-app.post('/data', (req, res) => {
-  const { name, cadence, sway, step_variability } = req.body;
-  latestData = { name, cadence, sway, step_variability };
-  console.log(`Received from ${name}:`, latestData);
-  res.status(200).send('OK');
+app.use(express.json());
+app.use(express.static("public"));
+
+// ESP32 posts data here
+app.post("/data", (req, res) => {
+  latestData = req.body;
+  res.sendStatus(200);
 });
 
-app.get('/data', (req, res) => {
+// Frontend polls this for live updates
+app.get("/status", (req, res) => {
   res.json(latestData);
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Optional fallback
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
