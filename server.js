@@ -16,6 +16,7 @@ let latest = {
   step_cv: 0,
   stance_cv: 0,
   recruit: "-",
+  worn: false,            // ✅ explicit worn flag
   updated_at: 0
 };
 
@@ -23,7 +24,7 @@ let latest = {
 app.post("/data", (req, res) => {
   const now = Date.now();
 
-  // Backward-compat mapping (your old keys -> new slim ones)
+  // Backward-compat mapping
   const cadence = Number(req.body.cadence ?? 0);
   const step_cv =
     req.body.step_cv !== undefined
@@ -34,7 +35,7 @@ app.post("/data", (req, res) => {
       ? Number(req.body.stance_cv)
       : Number(req.body.stance_variability ?? 0);
 
-  // reasons: new array OR old semicolon string OR derive from status
+  // reasons
   let reasons = [];
   if (Array.isArray(req.body.reasons)) {
     reasons = req.body.reasons.slice(0, 2);
@@ -46,14 +47,36 @@ app.post("/data", (req, res) => {
     else if (req.body.status.includes("Watch")) reasons = ["gait_drifting"];
   }
 
+  // worn: prefer explicit boolean from device; otherwise infer cautiously
+  let worn = latest.worn;
+  if (typeof req.body.worn === "boolean") {
+    worn = req.body.worn;
+  } else if (typeof req.body.worn === "string") {
+    worn = req.body.worn.toLowerCase() === "true";
+  } else if (typeof req.body.status === "string") {
+    if (req.body.status.includes("Not Worn")) worn = false;
+    else if (
+      req.body.status.includes("Standing") ||
+      req.body.status.includes("Normal") ||
+      req.body.status.includes("Watch") ||
+      req.body.status.includes("Warning") ||
+      req.body.status.includes("High Risk")
+    ) worn = true;
+  }
+
+  // status: take device status, but normalize if worn=false
+  let status = req.body.status || "✅ Normal";
+  if (worn === false) status = "👟 Not Worn";
+
   latest = {
     mode: req.body.mode || latest.mode || "Marching",
-    status: req.body.status || "✅ Normal",
+    status,
     reasons,
     cadence,
     step_cv,
     stance_cv,
     recruit: req.body.recruit || latest.recruit || "-",
+    worn,                         // ✅ include worn
     updated_at: now
   };
 
@@ -74,6 +97,7 @@ app.get("/status", (req, res) => {
       step_cv: 0,
       stance_cv: 0,
       recruit: latest.recruit || "-",
+      worn: false,                 // ✅ report not worn when stale
       updated_at: latest.updated_at || 0
     });
   }
