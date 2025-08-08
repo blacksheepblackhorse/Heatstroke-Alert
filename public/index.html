@@ -6,9 +6,9 @@
   <title>Heat Risk Monitor</title>
   <style>
     body { font-family: system-ui, Arial, sans-serif; background:#f7f7f7; padding: 32px; }
-    .card { background:#fff; max-width: 520px; margin:auto; padding:20px; border-radius:14px; box-shadow:0 4px 12px rgba(0,0,0,.08); }
+    .card { background:#fff; max-width: 560px; margin:auto; padding:20px; border-radius:14px; box-shadow:0 4px 12px rgba(0,0,0,.08); }
     .title { font-size:22px; text-align:center; margin-bottom:8px; }
-    .badge { font-size:26px; text-align:center; margin:6px 0 12px; }
+    .badge { font-size:22px; text-align:center; margin:10px 0 12px; padding:8px 12px; border-radius:999px; background:#f3f4f6; border:1px solid #e5e7eb; display:inline-block; }
     .sub { color:#666; text-align:center; margin-bottom:18px; min-height:20px; }
     .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; }
     .tile { padding:12px; border:1px solid #eee; border-radius:12px; background:#fff; }
@@ -47,7 +47,9 @@
       "sway_warn":"Sway high",
       "critical_posture":"Collapse posture",
       "gait_abnormal":"Gait abnormal",
-      "gait_drifting":"Gait drifting"
+      "gait_drifting":"Gait drifting",
+      "standing":"Standing",
+      "no_foot":"Not worn"
     }[r] || r);
 
     const fmt = (v, d=3) => (Number.isFinite(v) ? v.toFixed(d) : "–");
@@ -58,9 +60,9 @@
         const r = await fetch("/status");
         const d = await r.json();
 
-        el("status").textContent = `${d.status} — ${d.recruit || "-"}`;
+        // include worn flag in status line
+        el("status").textContent = `${d.status} — ${d.recruit || "-"} — ${d.worn ? "👞 Worn" : "👟 Not Worn"}`;
 
-        // reasons can be array or empty
         const reasons = (d.reasons || []).slice(0,2).map(niceReason).join("; ");
         el("reasons").textContent = reasons;
 
@@ -70,7 +72,7 @@
 
         el("meta").textContent = `Mode: ${d.mode || "—"} • Updated: ${ago(d.updated_at)}`;
       } catch (e){
-        el("status").textContent = "❌ Not Sensing";
+        el("status").textContent = "❌ Not Sensing — – — 👟 Not Worn";
         el("reasons").textContent = "";
         el("cad").textContent = el("stepcv").textContent = el("stancecv").textContent = "–";
         el("meta").textContent = "Disconnected";
