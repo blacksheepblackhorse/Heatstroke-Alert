@@ -5,7 +5,7 @@ const path = require("path");
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public")); // serves index.html
+app.use(express.static("public")); // serves index.html from /public
 
 // Minimal state the frontend needs
 let latest = {
@@ -24,7 +24,7 @@ let latest = {
 app.post("/data", (req, res) => {
   const now = Date.now();
 
-  // Parse numbers safely
+  // Numbers (accept new or legacy keys)
   const cadence = Number(req.body.cadence ?? 0);
   const step_cv =
     req.body.step_cv !== undefined
@@ -34,17 +34,6 @@ app.post("/data", (req, res) => {
     req.body.stance_cv !== undefined
       ? Number(req.body.stance_cv)
       : Number(req.body.stance_variability ?? 0);
-
-  // Parse worn flag
-  let worn = latest.worn;
-  if (typeof req.body.worn === "boolean") {
-    worn = req.body.worn;
-  } else if (typeof req.body.worn === "string") {
-    worn = req.body.worn.toLowerCase() === "true";
-  } else if (typeof req.body.status === "string") {
-    if (req.body.status.includes("Not Worn")) worn = false;
-    else worn = true;
-  }
 
   // reasons: array OR semicolon string OR derived from status
   let reasons = [];
@@ -56,14 +45,22 @@ app.post("/data", (req, res) => {
     if (req.body.status.includes("High Risk")) reasons = ["critical_posture"];
     else if (req.body.status.includes("Warning")) reasons = ["gait_abnormal"];
     else if (req.body.status.includes("Watch")) reasons = ["gait_drifting"];
+    else if (req.body.status.includes("Not Worn")) reasons = ["no_foot"];
+    else if (req.body.status.includes("Standing")) reasons = ["standing"];
   }
 
-  // Set status based on worn flag if present
+  // worn: prefer explicit boolean from device
+  let worn = latest.worn;
+  if (typeof req.body.worn === "boolean") {
+    worn = req.body.worn;
+  } else if (typeof req.body.worn === "string") {
+    worn = req.body.worn.toLowerCase() === "true";
+  }
+
+  // status: if device sent 'worn', force status to match it
   let status = req.body.status || "✅ Normal";
   if (req.body.worn !== undefined) {
     status = worn ? "👞 Worn" : "👟 Not Worn";
-  } else if (worn === false) {
-    status = "👟 Not Worn";
   }
 
   latest = {
