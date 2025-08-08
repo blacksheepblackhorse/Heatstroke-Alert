@@ -1,37 +1,89 @@
 const express = require("express");
-const app = express();
+const cors = require("cors");
 const path = require("path");
 
-let latestData = {
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.static("public")); // serves index.html
+
+// Minimal state the frontend needs
+let latest = {
+  mode: "Marching",
   status: "❌ Not Sensing",
-  recruit: "-",  // ✅ Added so frontend won't break
+  reasons: [],
   cadence: 0,
-  sway: 0,
-  step_variability: 0,
-  total_steps: 0
+  step_cv: 0,
+  stance_cv: 0,
+  recruit: "-",
+  updated_at: 0
 };
 
-// Middleware to parse JSON and serve static files
-app.use(express.json());
-app.use(express.static("public")); // Serves index.html from /public folder
-
-// Endpoint for ESP32 to POST data
+// ESP32 posts data here (accepts old or new payloads)
 app.post("/data", (req, res) => {
-  latestData = req.body;
-  console.log("📩 Received from ESP32:", latestData);
+  const now = Date.now();
+
+  // Backward-compat mapping (your old keys -> new slim ones)
+  const cadence = Number(req.body.cadence ?? 0);
+  const step_cv =
+    req.body.step_cv !== undefined
+      ? Number(req.body.step_cv)
+      : Number(req.body.step_variability ?? 0);
+  const stance_cv =
+    req.body.stance_cv !== undefined
+      ? Number(req.body.stance_cv)
+      : Number(req.body.stance_variability ?? 0);
+
+  // reasons: new array OR old semicolon string OR derive from status
+  let reasons = [];
+  if (Array.isArray(req.body.reasons)) {
+    reasons = req.body.reasons.slice(0, 2);
+  } else if (typeof req.body.reasons === "string") {
+    reasons = req.body.reasons.split(";").filter(Boolean).slice(0, 2);
+  } else if (typeof req.body.status === "string") {
+    if (req.body.status.includes("High Risk")) reasons = ["critical_posture"];
+    else if (req.body.status.includes("Warning")) reasons = ["gait_abnormal"];
+    else if (req.body.status.includes("Watch")) reasons = ["gait_drifting"];
+  }
+
+  latest = {
+    mode: req.body.mode || latest.mode || "Marching",
+    status: req.body.status || "✅ Normal",
+    reasons,
+    cadence,
+    step_cv,
+    stance_cv,
+    recruit: req.body.recruit || latest.recruit || "-",
+    updated_at: now
+  };
+
+  console.log("📩 Received from ESP32:", latest);
   res.sendStatus(200);
 });
 
-// Endpoint for frontend to GET current status
+// Frontend polls this; if stale, force Not Sensing
 app.get("/status", (req, res) => {
-  res.json(latestData);
+  const now = Date.now();
+  const stale = !latest.updated_at || (now - latest.updated_at > 12000); // >12s
+  if (stale) {
+    return res.json({
+      mode: latest.mode || "Marching",
+      status: "❌ Not Sensing",
+      reasons: [],
+      cadence: 0,
+      step_cv: 0,
+      stance_cv: 0,
+      recruit: latest.recruit || "-",
+      updated_at: latest.updated_at || 0
+    });
+  }
+  res.json(latest);
 });
 
-// Fallback to index.html for all other routes (optional)
+// Fallback to index.html
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on :${PORT}`));
