@@ -1,69 +1,84 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
-  <title>Gait Monitoring Dashboard</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Heat Risk Monitor</title>
   <style>
-    body {
-      font-family: Arial;
-      background: #f7f7f7;
-      padding: 40px;
-    }
-
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      max-width: 400px;
-      margin: auto;
-    }
-
-    h1 {
-      font-size: 24px;
-      text-align: center;
-    }
-
-    .status {
-      font-size: 20px;
-      margin: 15px 0;
-      text-align: center;
-      font-weight: bold;
-    }
-
-    .metric {
-      margin: 10px 0;
-      font-size: 16px;
-    }
+    body { font-family: system-ui, Arial, sans-serif; background:#f7f7f7; padding: 32px; }
+    .card { background:#fff; max-width: 520px; margin:auto; padding:20px; border-radius:14px; box-shadow:0 4px 12px rgba(0,0,0,.08); }
+    .title { font-size:22px; text-align:center; margin-bottom:8px; }
+    .badge { font-size:26px; text-align:center; margin:6px 0 12px; }
+    .sub { color:#666; text-align:center; margin-bottom:18px; min-height:20px; }
+    .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; }
+    .tile { padding:12px; border:1px solid #eee; border-radius:12px; background:#fff; }
+    .label { font-size:12px; color:#666; text-transform:uppercase; letter-spacing:.04em; }
+    .value { font-size:22px; margin-top:6px; }
+    .meta { color:#666; text-align:center; margin-top:14px; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>👣 Gait Status Monitor</h1>
-    <div id="status" class="status">Status: ❌ Not Sensing</div>
-    <div id="recruit" class="metric">Recruit: -</div>
-    <div id="cadence" class="metric">Cadence: -</div>
-    <div id="sway" class="metric">Sway: -</div>
-    <div id="variability" class="metric">Step Variability: -</div>
-    <div id="steps" class="metric">Total Steps: -</div>
+    <div class="title">👣 Gait Status Monitor</div>
+    <div id="status" class="badge">Loading…</div>
+    <div id="reasons" class="sub"></div>
+
+    <div class="grid">
+      <div class="tile"><div class="label">Cadence (spm)</div><div class="value" id="cad">–</div></div>
+      <div class="tile"><div class="label">Step CV</div><div class="value" id="stepcv">–</div></div>
+      <div class="tile"><div class="label">Stance CV</div><div class="value" id="stancecv">–</div></div>
+    </div>
+
+    <div id="meta" class="meta"></div>
   </div>
 
   <script>
-    function updateStatus() {
-      fetch("/status")
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById("status").innerText = "Status: " + data.status;
-          document.getElementById("recruit").innerText = "Recruit: " + data.recruit;
-          document.getElementById("cadence").innerText = "Cadence: " + data.cadence + " steps/min";
-          document.getElementById("sway").innerText = "Sway: " + data.sway.toFixed(2);
-          document.getElementById("variability").innerText = "Step Variability: " + data.step_variability.toFixed(2);
-          document.getElementById("steps").innerText = "Total Steps: " + data.total_steps;
-        })
-        .catch(err => console.error("Error fetching status:", err));
+    const el = id => document.getElementById(id);
+    const niceReason = r => ({
+      "cadence_low":"Cadence low",
+      "cadence_high":"Cadence high",
+      "cadence_watch":"Cadence drifting",
+      "cadence_warn":"Cadence out of range",
+      "stepcv_watch":"Stride timing inconsistent",
+      "stepcv_warn":"Stride timing unstable",
+      "stancecv_watch":"Stance variability high",
+      "stancecv_warn":"Stance variability very high",
+      "sway_watch":"Sway elevated",
+      "sway_warn":"Sway high",
+      "critical_posture":"Collapse posture",
+      "gait_abnormal":"Gait abnormal",
+      "gait_drifting":"Gait drifting"
+    }[r] || r);
+
+    const fmt = (v, d=3) => (Number.isFinite(v) ? v.toFixed(d) : "–");
+    const ago = ts => !ts ? "never" : `${Math.max(0, Math.floor((Date.now()-ts)/1000))}s ago`;
+
+    async function tick(){
+      try{
+        const r = await fetch("/status");
+        const d = await r.json();
+
+        el("status").textContent = `${d.status} — ${d.recruit || "-"}`;
+
+        // reasons can be array or empty
+        const reasons = (d.reasons || []).slice(0,2).map(niceReason).join("; ");
+        el("reasons").textContent = reasons;
+
+        el("cad").textContent     = fmt(d.cadence, 1);
+        el("stepcv").textContent  = fmt(d.step_cv, 3);
+        el("stancecv").textContent= fmt(d.stance_cv, 3);
+
+        el("meta").textContent = `Mode: ${d.mode || "—"} • Updated: ${ago(d.updated_at)}`;
+      } catch (e){
+        el("status").textContent = "❌ Not Sensing";
+        el("reasons").textContent = "";
+        el("cad").textContent = el("stepcv").textContent = el("stancecv").textContent = "–";
+        el("meta").textContent = "Disconnected";
+      }
     }
 
-    setInterval(updateStatus, 5000);
-    updateStatus();
+    tick();
+    setInterval(tick, 2000);
   </script>
 </body>
 </html>
