@@ -16,7 +16,7 @@ let latest = {
   step_cv: 0,
   stance_cv: 0,
   recruit: "-",
-  worn: false,            // ✅ explicit worn flag
+  worn: false,
   updated_at: 0
 };
 
@@ -24,7 +24,7 @@ let latest = {
 app.post("/data", (req, res) => {
   const now = Date.now();
 
-  // Backward-compat mapping
+  // Parse numbers safely
   const cadence = Number(req.body.cadence ?? 0);
   const step_cv =
     req.body.step_cv !== undefined
@@ -35,7 +35,18 @@ app.post("/data", (req, res) => {
       ? Number(req.body.stance_cv)
       : Number(req.body.stance_variability ?? 0);
 
-  // reasons
+  // Parse worn flag
+  let worn = latest.worn;
+  if (typeof req.body.worn === "boolean") {
+    worn = req.body.worn;
+  } else if (typeof req.body.worn === "string") {
+    worn = req.body.worn.toLowerCase() === "true";
+  } else if (typeof req.body.status === "string") {
+    if (req.body.status.includes("Not Worn")) worn = false;
+    else worn = true;
+  }
+
+  // reasons: array OR semicolon string OR derived from status
   let reasons = [];
   if (Array.isArray(req.body.reasons)) {
     reasons = req.body.reasons.slice(0, 2);
@@ -47,26 +58,13 @@ app.post("/data", (req, res) => {
     else if (req.body.status.includes("Watch")) reasons = ["gait_drifting"];
   }
 
-  // worn: prefer explicit boolean from device; otherwise infer cautiously
-  let worn = latest.worn;
-  if (typeof req.body.worn === "boolean") {
-    worn = req.body.worn;
-  } else if (typeof req.body.worn === "string") {
-    worn = req.body.worn.toLowerCase() === "true";
-  } else if (typeof req.body.status === "string") {
-    if (req.body.status.includes("Not Worn")) worn = false;
-    else if (
-      req.body.status.includes("Standing") ||
-      req.body.status.includes("Normal") ||
-      req.body.status.includes("Watch") ||
-      req.body.status.includes("Warning") ||
-      req.body.status.includes("High Risk")
-    ) worn = true;
-  }
-
-  // status: take device status, but normalize if worn=false
+  // Set status based on worn flag if present
   let status = req.body.status || "✅ Normal";
-  if (worn === false) status = "👟 Not Worn";
+  if (req.body.worn !== undefined) {
+    status = worn ? "👞 Worn" : "👟 Not Worn";
+  } else if (worn === false) {
+    status = "👟 Not Worn";
+  }
 
   latest = {
     mode: req.body.mode || latest.mode || "Marching",
@@ -76,7 +74,7 @@ app.post("/data", (req, res) => {
     step_cv,
     stance_cv,
     recruit: req.body.recruit || latest.recruit || "-",
-    worn,                         // ✅ include worn
+    worn,
     updated_at: now
   };
 
@@ -87,7 +85,7 @@ app.post("/data", (req, res) => {
 // Frontend polls this; if stale, force Not Sensing
 app.get("/status", (req, res) => {
   const now = Date.now();
-  const stale = !latest.updated_at || (now - latest.updated_at > 12000); // >12s
+  const stale = !latest.updated_at || now - latest.updated_at > 12000; // >12s
   if (stale) {
     return res.json({
       mode: latest.mode || "Marching",
@@ -97,7 +95,7 @@ app.get("/status", (req, res) => {
       step_cv: 0,
       stance_cv: 0,
       recruit: latest.recruit || "-",
-      worn: false,                 // ✅ report not worn when stale
+      worn: false,
       updated_at: latest.updated_at || 0
     });
   }
