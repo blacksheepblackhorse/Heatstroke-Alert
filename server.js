@@ -23,6 +23,8 @@ let latest = {
 // ESP32 posts data here (accepts old or new payloads)
 app.post("/data", (req, res) => {
   const now = Date.now();
+  const tsMs =
+    typeof req.body.ts === "number" ? req.body.ts * 1000 : now;
 
   // Numbers (accept new or legacy keys)
   const cadence = Number(req.body.cadence ?? 0);
@@ -57,11 +59,11 @@ app.post("/data", (req, res) => {
     worn = req.body.worn.toLowerCase() === "true";
   }
 
-  // status: if device sent 'worn', force status to match it
-  let status = req.body.status || "✅ Normal";
-  if (req.body.worn !== undefined) {
-    status = worn ? "👞 Worn" : "👟 Not Worn";
-  }
+  // status: use device-reported status; show 'worn' separately in the UI
+  const status =
+    typeof req.body.status === "string"
+      ? req.body.status
+      : latest.status || "✅ Normal";
 
   latest = {
     mode: req.body.mode || latest.mode || "Marching",
@@ -72,7 +74,7 @@ app.post("/data", (req, res) => {
     stance_cv,
     recruit: req.body.recruit || latest.recruit || "-",
     worn,
-    updated_at: now
+    updated_at: tsMs
   };
 
   console.log("📩 Received from ESP32:", latest);
